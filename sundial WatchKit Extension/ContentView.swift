@@ -77,8 +77,13 @@ struct ContentView: View {
 //             print("\(hour):\(minute):\(second):\(nanosecond) - \(self.bigAngle)")
 
         })
+        .onDisappear {
+            if self.motionManager.isDeviceMotionActive {
+                self.motionManager.stopDeviceMotionUpdates()
+            }
+        }
         .onAppear {
-            if !motionManager.isDeviceMotionAvailable {
+            if !self.motionManager.isDeviceMotionAvailable {
                 print("No motion capture available on device")
             } else {
                 print("Starting motion capture")
