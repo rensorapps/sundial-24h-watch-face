@@ -14,12 +14,43 @@ struct ContentView: View {
     @State var bigAngle: Double = 0
     @State var smallAngle: Double = 0
     @State var y: Double = 0
-
+    @State var accellerationMaginitudeMax: Double = 0
+    
     let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
     
     // Create a CMMotionManager instance
     let motionManager = CMMotionManager()
     let queue = OperationQueue()
+    
+    func accellerate(data: CMDeviceMotion?, error: Error?) {
+        guard let data = data else {
+            print("Error: \(error!)")
+            return
+        }
+//        let attitude: CMAttitude = data.attitude
+        let accelleration = data.userAcceleration
+        
+//#if targetEnvironment(simulator)
+        let amm: Double = sqrt( pow(accelleration.x,2) + pow(accelleration.y,2) + pow(accelleration.z,2) )
+        
+        if amm > accellerationMaginitudeMax {
+            accellerationMaginitudeMax = amm
+//            print("pitch: \(attitude.pitch), yaw: \(attitude.yaw), roll: \(attitude.roll)")
+            print("x: \(accelleration.x), y: \(accelleration.y), z: \(accelleration.z)")
+        }
+//#endif
+
+        DispatchQueue.main.async {
+            self.grow(amm)
+        }
+    }
+    
+    func grow(_ by: Double) {
+        self.y += by
+        if self.y > 100 {
+            self.y = 0
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -39,10 +70,7 @@ struct ContentView: View {
             Circle().frame(width: 24, height: 24, alignment: .center)
                 .foregroundColor(.black)
                 .onTapGesture {
-                    self.y += Double.random(in: 1...10)
-                    if self.y > 100 {
-                        self.y = 0
-                    }
+                    self.grow(Double.random(in: 1...10))
                 }
             ForEach(1...12, id: \.self) { tick in
                 let tick2 = tick * 2
@@ -88,20 +116,9 @@ struct ContentView: View {
             } else {
                 print("Starting motion capture")
                 self.motionManager.accelerometerUpdateInterval = 0.1
-                self.motionManager.startDeviceMotionUpdates(to: self.queue) { (data: CMDeviceMotion?, error: Error?) in
-                    guard let data = data else {
-                        print("Error: \(error!)")
-                        return
-                    }
-                    let attitude: CMAttitude = data.attitude
-                    let accelleration = data.userAcceleration
-                    
-                    print("pitch: \(attitude.pitch), yaw: \(attitude.yaw), roll: \(attitude.roll)")
-                    print("x: \(accelleration.x), y: \(accelleration.y), z: \(accelleration.z)")
-
-                    DispatchQueue.main.async {
-                        self.y += accelleration.y
-                    }
+                self.motionManager.startDeviceMotionUpdates(to: self.queue) {
+                    (data: CMDeviceMotion?, error: Error?) in
+                    self.accellerate(data: data, error: error)
                 }
             }
         }
